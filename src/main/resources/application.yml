@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb             # URL de la base de datos H2 en memoria
+    driver-class-name: org.h2.Driver    # Driver JDBC de H2
+    username: sa                        # Usuario por defecto de H2
+    password:                           # Contraseña (vacía por defecto en H2)
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect  # Dialecto SQL para H2
+    hibernate:
+      ddl-auto: update                  # Crea o actualiza las tablas automáticamente al iniciar
+  h2:
+    console:
+      enabled: true                     # Habilita la consola web de H2 en /h2-console
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.orm.jdbc.bind: TRACE         # Muestra los valores que se envían a los parámetros ?
+    org.hibernate.orm.jdbc.extract: TRACE    # Muestra los valores que se extraen desde la BD
+    org.hibernate.type.descriptor.sql: TRACE   # Para ver más detalles de tipos

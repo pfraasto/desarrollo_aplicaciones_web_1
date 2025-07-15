@@ -1,0 +1,22 @@
+erDiagram
+CLIENTE {
+Long id PK
+String nombre
+String correo
+}
+
+    ORDEN {
+        Long id PK
+        Long cliente_id FK
+        Long producto_id FK
+    }
+
+    PRODUCTO {
+        Long id PK
+        String nombre
+        Double precio
+        Integer stock
+    }
+
+    CLIENTE ||--o{ ORDEN : "realiza"
+    PRODUCTO ||--o{ ORDEN : "es parte de"
