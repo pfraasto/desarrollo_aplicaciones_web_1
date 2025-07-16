@@ -6,19 +6,20 @@ import lombok.Setter;
 import lombok.ToString;
 
 @Entity
+@Table(name = "alumno_curso")
 @Getter
 @Setter
 @ToString
-public class Orden {
+public class AlumnoCurso {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "alumno_curso_id")
+    private Long alumnoCursoId;
 
     @ManyToOne
-    @JoinColumn(name = "cliente_id", nullable = false)
-    private Cliente cliente;
+    @JoinColumn(name = "alumno_id", nullable = false)
+    private Alumno alumno;
 
-    @ManyToOne
-    @JoinColumn(name = "producto_id", nullable = false)
-    private Producto producto;
+    @Column(name = "curso")
+    private String curso;
 }

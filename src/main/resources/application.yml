@@ -1,20 +1,21 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb             # URL de la base de datos H2 en memoria
-    driver-class-name: org.h2.Driver    # Driver JDBC de H2
-    username: sa                        # Usuario por defecto de H2
-    password:                           # Contrase�a (vac�a por defecto en H2)
+    url: jdbc:mysql://localhost:3306/cibertec?serverTimezone=America/Lima&allowPublicKeyRetrieval=true&useSSL=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+    hikari:
+      maximum-pool-size: 10         # Número máximo de conexiones en el pool
+      minimum-idle: 5               # Mínimo de conexiones inactivas
+      idle-timeout: 600000          # Tiempo (ms) antes de cerrar una conexión inactiva
+      max-lifetime: 1800000         # Tiempo máximo de vida (ms) de una conexión
+      connection-timeout: 30000     # Tiempo de espera para obtener una conexión
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect  # Dialecto SQL para H2
-    hibernate:
-      ddl-auto: update                  # Crea o actualiza las tablas autom�ticamente al iniciar
-  h2:
-    console:
-      enabled: true                     # Habilita la consola web de H2 en /h2-console
-
-logging:
-  level:
-    root: INFO
-    org.hibernate.orm.jdbc.bind: TRACE         # Muestra los valores que se env�an a los par�metros ?
-    org.hibernate.orm.jdbc.extract: TRACE    # Muestra los valores que se extraen desde la BD
-    org.hibernate.type.descriptor.sql: TRACE   # Para ver m�s detalles de tipos
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    show-sql: true
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20                 # Agrupa hasta 20 operaciones en lote (inserciones/actualizaciones)
+        order_inserts: true              # Ordena las inserciones para optimizar el rendimiento del batch
+        order_updates: true              # Ordena las actualizaciones para mejorar el uso del batch
