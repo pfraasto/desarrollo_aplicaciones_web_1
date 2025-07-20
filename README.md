@@ -82,15 +82,27 @@ CREATE TABLE alumno_curso (
 
 ### 📊 Pool de conexiones
 
-**Fórmula para calcular conexiones óptimas:**
+**Fórmula para calcular conexiones óptimas: Connection Pool Sizing Formula**
 ```
-Conexiones = (núcleos_CPU × 2) + (usuarios_concurrentes ÷ 10)
+Pool Óptimo = (Núcleos CPU × 2) + Discos HDD/SSD efectivos
+Minimum Idle = Pool Máximo × 0.25
+```
+
+```bash
+# Ver CPU
+wmic cpu get NumberOfCores,NumberOfLogicalProcessors
+
+# Ver RAM
+wmic computersystem get TotalPhysicalMemory
+
+# Ver discos
+wmic diskdrive get model,size,interfacetype
 ```
 
 **Ejemplo práctico:**
-- Servidor: 4 núcleos CPU
-- Usuarios concurrentes: 100
-- Cálculo: (4 × 2) + (100 ÷ 10) = 18 conexiones
+- Servidor: 6 núcleos CPU
+- Discos: 1 HDD + 1 SSD = 2 discos efectivos
+- Cálculo: Pool Óptimo = (6 × 2) + 2 = 14 conexiones
 
 **Configuración recomendada:**
 ```yaml
@@ -101,8 +113,8 @@ spring:
     username: root
     password: 123456
     hikari:
-      maximum-pool-size: 10         # Máximo de conexiones
-      minimum-idle: 5               # Mínimo de conexiones inactivas
+      maximum-pool-size: 14         # Máximo de conexiones
+      minimum-idle: 4               # Mínimo de conexiones inactivas
       idle-timeout: 600000          # 10 minutos
       max-lifetime: 1800000         # 30 minutos
       connection-timeout: 30000     # 30 segundos
