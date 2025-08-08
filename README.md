@@ -1,285 +1,262 @@
-# 📘 Conceptos Avanzados de JPA con Spring Boot
 
-> **Aplicación educativa** construida con **Spring Boot** y **JPA (Java Persistence API)** para dominar conceptos avanzados de persistencia de datos.
+# 🔐 Autenticación con Spring Boot, Spring Web MVC y JWT
+
+> **Aplicación educativa** para aprender a implementar autenticación y autorización sin estado (*stateless*) usando **Spring Boot**, **Spring Web MVC**, **Spring Security** y **JWT**.
 
 ---
 
 ## 🎯 Objetivos de aprendizaje
 
-Al finalizar este proyecto, dominarás los siguientes conceptos avanzados de JPA:
+Al finalizar este proyecto, el alumno será capaz de:
 
 | Concepto | Descripción | Beneficio |
 |----------|-------------|-----------|
-| **Flushing** | Sincronización manual memoria ↔ BD | Control preciso de operaciones SQL |
-| **Batching** | Agrupación de operaciones SQL | Mejora significativa del rendimiento |
-| **Fetching** | Estrategias de carga de relaciones | Optimización de consultas |
-| **Caching** | Sistema de caché multinivel | Reducción de consultas repetitivas |
-| **Concurrencia** | Control de modificaciones simultáneas | Integridad de datos |
+| **Spring Web MVC** | Patrón Modelo-Vista-Controlador en Spring | Entender el flujo de peticiones HTTP |
+| **Arquitectura en capas** | Separación de presentación, aplicación, dominio e infraestructura | Código mantenible y escalable |
+| **Spring Security** | Framework de autenticación y autorización | Proteger endpoints y controlar acceso |
+| **JWT (JSON Web Token)** | Token seguro para identificar usuarios | Sesiones sin estado y escalabilidad |
+| **Filtros de seguridad** | Interceptar y validar peticiones antes del controlador | Seguridad centralizada y reusable |
 
 ---
 
-## 🏗️ Arquitectura del proyecto
+## 🏗 Arquitectura del proyecto
 
 ```
 src/main/java/
-├── entity/
-│   ├── Alumno.java           # Entidad principal
-│   └── AlumnoCurso.java      # Entidad de relación
-├── repository/
-│   ├── AlumnoRepository.java
-│   └── AlumnoCursoRepository.java
-└── service/
-    └── JpaAvanzadoService.java
+└── pe/cibertec/desarrollo_aplicaciones_web_1/
+    ├── application/
+    │   └── seguridad/              # Lógica de casos de uso
+    ├── domain/
+    │   └── seguridad/              # Modelos y contratos de negocio
+    ├── infrastructure/
+    │   ├── configuration/seguridad # Configuración de seguridad y filtros
+    │   └── seguridad/              # Entidades JPA y repositorios
+    └── presentation/
+        ├── controller/              # Controladores REST
+        └── dto/                     # Objetos de transferencia de datos
 ```
 
-### 📊 Modelo de datos
+### 📊 Diagrama de capas
+```mermaid
+graph TD
+    A[Cliente REST] --> B[Presentation Layer]
+    B --> C[Application Layer]
+    C --> D[Domain Layer]
+    D --> E[Infrastructure Layer]
+    E --> F[Base de Datos]
+```
+
+---
+
+## 📊 Modelo de datos
+
+El sistema utiliza un modelo **muchos a muchos** entre usuarios y roles.
 
 ```mermaid
 erDiagram
-    ALUMNO {
-        int alumno_id PK
-        varchar(50) nombre
-        varchar(50) email
-        int version "Control de concurrencia"
+    USUARIO {
+        BIGINT id PK
+        VARCHAR username
+        VARCHAR password
+    }
+    ROL {
+        BIGINT id PK
+        VARCHAR nombre
+    }
+    USUARIO_ROL {
+        BIGINT id_usuario FK
+        BIGINT id_rol FK
     }
 
-    ALUMNO_CURSO {
-        int alumno_curso_id PK
-        int alumno_id FK
-        varchar(50) curso
-    }
-
-    ALUMNO ||--o{ ALUMNO_CURSO : "inscrito_en"
+    USUARIO ||--o{ USUARIO_ROL : asigna
+    ROL ||--o{ USUARIO_ROL : pertenece
 ```
+
+---
+
+## 🗄 Script SQL — Creación de tablas y datos iniciales
+
+```sql
+CREATE TABLE usuario (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE rol (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE usuario_rol (
+    id_usuario BIGINT NOT NULL,
+    id_rol BIGINT NOT NULL,
+    PRIMARY KEY (id_usuario, id_rol),
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id) ON DELETE CASCADE,
+    FOREIGN KEY (id_rol) REFERENCES rol(id) ON DELETE CASCADE
+);
+
+-- Datos iniciales
+INSERT INTO usuario (username, password) VALUES
+('admin', '$2a$10$hash_bcrypt_admin'),
+('user', '$2a$10$hash_bcrypt_user');
+
+INSERT INTO rol (nombre) VALUES ('ROLE_ADMIN'), ('ROLE_USER');
+
+INSERT INTO usuario_rol (id_usuario, id_rol) VALUES
+(1, 1),
+(2, 2);
+```
+
+💡 **Nota:** Las contraseñas deben estar encriptadas con **BCrypt**.
 
 ---
 
 ## ⚙️ Configuración del proyecto
 
-### 🗄️ Base de datos
+### 📦 Dependencias principales en `pom.xml`
+- `spring-boot-starter-web` → Controladores REST y MVC
+- `spring-boot-starter-security` → Seguridad y autenticación
+- `spring-boot-starter-data-jpa` → Persistencia con JPA/Hibernate
+- `jjwt-api`, `jjwt-impl`, `jjwt-jackson` → Manejo de JWT
+- `mysql-connector-java` → Conexión a MySQL
+- `lombok` → Reducción de código repetitivo
 
-**Scripts de inicialización:**
-```sql
--- Crear base de datos
-CREATE DATABASE IF NOT EXISTS cibertec;
-USE cibertec;
-
--- Crear tablas
-CREATE TABLE alumno (
-    alumno_id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(50) NULL,
-    email VARCHAR(50) NULL,
-    version INT NULL
-);
-
-CREATE TABLE alumno_curso (
-    alumno_curso_id INT AUTO_INCREMENT PRIMARY KEY,
-    alumno_id INT NOT NULL,
-    curso VARCHAR(50) NOT NULL,
-    FOREIGN KEY (alumno_id) REFERENCES alumno(alumno_id)
-);
-```
-
-### 📊 Pool de conexiones
-
-**Fórmula para calcular conexiones óptimas: Connection Pool Sizing Formula**
-```
-Pool Óptimo = (Núcleos CPU × 2) + Discos HDD/SSD efectivos
-Minimum Idle = Pool Máximo × 0.25
-```
-
-```bash
-# Ver CPU
-wmic cpu get NumberOfCores,NumberOfLogicalProcessors
-
-# Ver RAM
-wmic computersystem get TotalPhysicalMemory
-
-# Ver discos
-wmic diskdrive get model,size,interfacetype
-```
-
-**Ejemplo práctico:**
-- Servidor: 6 núcleos CPU
-- Discos: 1 HDD + 1 SSD = 2 discos efectivos
-- Cálculo: Pool Óptimo = (6 × 2) + 2 = 14 conexiones
-
-**Configuración recomendada:**
+### 🛠 Configuración en `application.yml`
 ```yaml
+server:
+  port: 8080
+
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/cibertec
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/seguridad_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
     username: root
-    password: 123456
-    hikari:
-      maximum-pool-size: 14         # Máximo de conexiones
-      minimum-idle: 4               # Mínimo de conexiones inactivas
-      idle-timeout: 600000          # 10 minutos
-      max-lifetime: 1800000         # 30 minutos
-      connection-timeout: 30000     # 30 segundos
-```
-
-### 🔧 Configuración JPA
-
-```yaml
-spring:
+    password: 1234
   jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
-    show-sql: true                  # Mostrar SQL en desarrollo
+    hibernate:
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
-        jdbc:
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
-        format_sql: true            # Formatear SQL para mejor legibilidad
+        format_sql: true
+
+security:
+  jwt:
+    secret: Y2xhdmUtbXktc2VjcmV0YS1lbS1iYXNlNjQ=   # Clave Base64
+    expiration: 3600000  # 1 hora
 ```
 
 ---
 
-## 📚 Conceptos avanzados explicados
+## 🔄 Ciclo de vida de una petición
 
-### 1. 🔄 Flushing - Sincronización controlada
+```mermaid
+sequenceDiagram
+    participant Cliente as Cliente
+    participant DS as DispatcherServlet
+    participant HC as AuthController
+    participant SS as SeguridadServiceImpl
+    participant SR as SeguridadRepositoryImpl
+    participant DB as Base de Datos
+    participant TS as JwtTokenServiceImpl
 
-**¿Qué problema resuelve?** Controlar **cuándo** se ejecutan las operaciones SQL, sin esperar al commit de la transacción.
-
-**Casos de uso:**
-- ✅ Verificar errores de BD antes del commit
-- ✅ Obtener IDs generados automáticamente
-- ✅ Resolver dependencias entre operaciones
-
-```java
-// ❌ Problema: El INSERT no se ejecuta inmediatamente
-Alumno alumno = new Alumno("Franklin", "franklin@ejemplo.com");
-alumno = alumnoRepository.save(alumno); // Solo en memoria
-
-// ✅ Solución: Forzar sincronización
-entityManager.flush(); // Ejecuta INSERT en BD
-
-// Verificar que está persistido
-entityManager.clear(); // Limpiar caché
-Alumno verificado = entityManager.find(Alumno.class, alumno.getAlumnoId());
+    Cliente->>DS: POST /api/auth/login
+    DS->>HC: Llama login()
+    HC->>SS: seguridadService.login(request)
+    SS->>SR: Buscar usuario
+    SR->>DB: SELECT usuario
+    DB-->>SR: Datos usuario
+    SR-->>SS: UsuarioModel
+    SS->>TS: Generar JWT
+    TS-->>SS: Token generado
+    SS-->>HC: LoginResponseDto
+    HC-->>Cliente: Token JWT
 ```
 
-### 2. ⚡ Batching - Operaciones en lote
+---
 
-**¿Qué problema resuelve?** Reduce el número de viajes a la BD agrupando operaciones similares.
+## 🔐 Flujo de seguridad con JWT
 
-**Impacto en rendimiento:**
-- Sin batching: 25 inserciones = 25 viajes a BD
-- Con batching: 25 inserciones = 2 viajes a BD (lotes de 20 + 5)
-
-**Configuración recomendada:**
-```yaml
-spring:
-  jpa:
-    properties:
-      hibernate:
-        jdbc:
-          batch_size: 20              # Tamaño del lote
-        order_inserts: true           # Optimiza orden de inserción
-        order_updates: true           # Optimiza orden de actualización
+```mermaid
+flowchart TD
+    A[Cliente solicita endpoint protegido] --> B[SecurityConfig]
+    B --> C[JwtAuthenticationFilter]
+    C --> D[Extraer token del header Authorization]
+    D --> E[TokenService valida firma y expiración]
+    E -->|Válido| F[CustomUserDetailsService carga usuario]
+    F --> G[Spring Security autentica y permite acceso]
+    E -->|Inválido| H[401 Unauthorized]
 ```
 
-### 3. 📦 Fetching - Estrategias de carga
+---
 
-**¿Qué problema resuelve?** El temido **problema N+1** que genera consultas innecesarias.
+## 📂 Documentación clase por clase
 
-| Estrategia | Cuándo usar | Ventajas | Desventajas |
-|------------|-------------|----------|-------------|
-| **LAZY** | Datos opcionales | Menor uso de memoria | Posible LazyInitializationException |
-| **EAGER** | Datos siempre necesarios | Sin excepciones lazy | Mayor uso de memoria |
-| **JOIN FETCH** | Optimizar consultas específicas | Elimina N+1 | Consultas más complejas |
+### AuthController.java
+Controlador REST que recibe las credenciales del usuario, las envía al servicio de seguridad y retorna un JWT si son válidas.
 
-**Ejemplo del problema N+1:**
-```java
-// ❌ Problema: 1 consulta principal + N consultas adicionales
-List<AlumnoCurso> cursos = alumnoCursoRepository.findAll(); // 1 consulta
-for (AlumnoCurso curso : cursos) {
-    String nombre = curso.getAlumno().getNombre(); // N consultas adicionales
-}
+### SeguridadServiceImpl.java
+Servicio que valida las credenciales consultando el repositorio y, si son correctas, genera un JWT mediante `TokenService`.
 
-// ✅ Solución: JOIN FETCH
-@Query("SELECT ac FROM AlumnoCurso ac JOIN FETCH ac.alumno")
-List<AlumnoCurso> findAllWithAlumnos(); // Solo 1 consulta
-```
+### SecurityConfig.java
+Clase de configuración de Spring Security que define las rutas públicas y protegidas, y añade el filtro `JwtAuthenticationFilter`.
 
-### 4. 💾 Caching - Sistema de caché
+### JwtAuthenticationFilter.java
+Filtro que intercepta las solicitudes, extrae el token JWT del header `Authorization`, lo valida y autentica al usuario.
 
-**¿Qué problema resuelve?** Evita consultas repetitivas manteniendo entidades en memoria.
+### JwtTokenServiceImpl.java
+Servicio que implementa la generación, validación y extracción de datos de un JWT usando la librería `io.jsonwebtoken`.
 
-**Niveles de caché:**
+### CustomUserDetailsService.java
+Carga el usuario desde la base de datos y adapta sus roles a autoridades que entiende Spring Security.
 
-```
-🔄 Primer nivel (Session Cache)
-├── Automático por EntityManager
-├── Garantiza identidad de objetos
-└── Duración: una transacción
+### Entidades JPA
+- `UsuarioEntity`: Representa la tabla `usuario` con relación muchos a muchos hacia `RolEntity`.
+- `RolEntity`: Representa la tabla `rol`.
 
-🔄 Segundo nivel (SessionFactory Cache)
-├── Compartido entre sesiones
-├── Configurable por entidad
-└── Duración: configurable
-```
+### UsuarioRepositoryJpa.java
+Repositorio JPA que permite consultar usuarios por su `username`.
 
-**Demostración práctica:**
-```java
-// Primera consulta → BD
-Alumno consulta1 = entityManager.find(Alumno.class, 1L);
+---
 
-// Segunda consulta → CACHÉ (más rápida)
-Alumno consulta2 = entityManager.find(Alumno.class, 1L);
+## 🧪 Pruebas con Postman
 
-// Verificar identidad
-assert consulta1 == consulta2; // true - mismo objeto en memoria
-```
+1. **Login**
+   - Método: POST
+   - URL: `http://localhost:8080/api/auth/login`
+   - Body:
+     ```json
+     {
+       "username": "admin",
+       "password": "1234"
+     }
+     ```
+   - Respuesta: JWT.
 
-### 5. 🔐 Control de concurrencia
+2. **Acceso protegido**
+   - Método: GET
+   - URL: `http://localhost:8080/api/usuarios`
+   - Header: `Authorization: Bearer <token>`
 
-**¿Qué problema resuelve?** Previene pérdida de datos cuando múltiples usuarios modifican la misma entidad.
-
-**Estrategias disponibles:**
-
-| Tipo | Implementación | Cuándo usar |
-|------|---------------|-------------|
-| **Optimista** | `@Version` | Lecturas frecuentes, escrituras ocasionales |
-| **Pesimista** | Locks | Escrituras frecuentes, conflictos esperados |
-
-**Flujo de control optimista:**
-```java
-// 1. Dos usuarios obtienen la misma entidad (versión = 1)
-Alumno usuario1 = entityManager.find(Alumno.class, 1L);
-Alumno usuario2 = entityManager.find(Alumno.class, 1L);
-
-// 2. Usuario 1 modifica primero (versión → 2)
-usuario1.setNombre("Modificado por Usuario 1");
-entityManager.merge(usuario1); // ✅ Éxito
-
-// 3. Usuario 2 intenta modificar (versión aún = 1)
-usuario2.setNombre("Modificado por Usuario 2");
-entityManager.merge(usuario2); // ❌ OptimisticLockException
-```
+3. **Token inválido**
+   - Respuesta: 401 Unauthorized.
 
 ---
 
 ## 📈 Próximos pasos
 
-### 🔬 Experimentos sugeridos
-
-- [ ] Modificar `batch_size` y medir impacto en rendimiento
-- [ ] Comparar diferentes estrategias de fetching
-- [ ] Implementar caché de segundo nivel
-- [ ] Probar control de concurrencia pesimista
-- [ ] Analizar planes de ejecución SQL
-
-### 📚 Recursos para profundizar
-
-| Recurso | Descripción | Nivel |
-|---------|-------------|-------|
-| [JPA Specification](https://jakarta.ee/specifications/persistence/) | Documentación oficial | Intermedio |
-| [Hibernate Documentation](https://hibernate.org/orm/documentation/) | Guía completa de Hibernate | Intermedio |
-| [Spring Data JPA](https://docs.spring.io/spring-data/jpa/docs/current/reference/html/) | Referencia de Spring Data | Básico |
-| [High-Performance Java Persistence](https://vladmihalcea.com/books/high-performance-java-persistence/) | Libro especializado | Avanzado |
+| Ejercicio | Descripción |
+|-----------|-------------|
+| Registro de usuarios | Crear endpoint `POST /api/auth/register` |
+| Refresh token | Implementar renovación de tokens |
+| Roles avanzados | Crear más roles y proteger endpoints específicos |
+| Validaciones | Usar `@Valid` en DTOs |
 
 ---
+
+## 📚 Recursos recomendados
+
+- [Spring Security Docs](https://spring.io/projects/spring-security)
+- [JWT.io](https://jwt.io/)
+- [Baeldung - Spring Security](https://www.baeldung.com/tag/spring-security/)
+
