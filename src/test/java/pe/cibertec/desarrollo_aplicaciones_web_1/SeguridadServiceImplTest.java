@@ -1,18 +1,18 @@
 package pe.cibertec.desarrollo_aplicaciones_web_1;
 
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Encoders;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import pe.cibertec.desarrollo_aplicaciones_web_1.application.seguridad.SeguridadServiceImpl;
+import pe.cibertec.desarrollo_aplicaciones_web_1.application.seguridad.usecase.AutenticarUsuarioUseCase;
+import pe.cibertec.desarrollo_aplicaciones_web_1.application.seguridad.usecase.RefrescarTokenUseCase;
 import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.model.SeguridadModel;
-import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.model.UsuarioModel;
-import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.service.TokenService;
-import pe.cibertec.desarrollo_aplicaciones_web_1.infrastructure.configuration.seguridad.CustomUserDetails;
-import pe.cibertec.desarrollo_aplicaciones_web_1.infrastructure.seguridad.service.CustomUserDetailsService;
+
+import javax.crypto.SecretKey;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,29 +22,32 @@ import static org.mockito.Mockito.*;
 class SeguridadServiceImplTest {
 
     @Mock
-    private AuthenticationManager authenticationManager;
+    private AutenticarUsuarioUseCase autenticarUsuarioUseCase;
 
     @Mock
-    private TokenService tokenService;
-
-    @Mock
-    private CustomUserDetailsService userDetailsService;
+    private RefrescarTokenUseCase refrescarTokenUseCase;
 
     @InjectMocks
     private SeguridadServiceImpl seguridadService;
+
+
+    @Test
+    void generar_llave() {
+        // Generar una nueva clave HMAC-SHA512
+        SecretKey key = Jwts.SIG.HS512.key().build();
+        // Obtener en base64url para guardar
+        String secretBase64Url = Encoders.BASE64URL.encode(key.getEncoded());
+        System.out.println("secretBase64Url: " + secretBase64Url);
+        assertNotNull(secretBase64Url);
+    }
 
     @Test
     void autenticacion_credencialesValidas_retornaTokens() {
         // Arrange
         String username = "usuario";
         String password = "password";
-        CustomUserDetails userDetails = mock(CustomUserDetails.class);
-        UsuarioModel usuario = mock(UsuarioModel.class);
-
-        when(userDetailsService.loadUserByUsername(username)).thenReturn(userDetails);
-        when(userDetails.getUsuario()).thenReturn(usuario);
-        when(tokenService.generarTokenAcceso(usuario)).thenReturn("access-token");
-        when(tokenService.generarTokenRefresco(usuario)).thenReturn("refresh-token");
+        SeguridadModel esperado = SeguridadModel.builder().token("access-token").refresh("refresh-token").build();
+        when(autenticarUsuarioUseCase.ejecutar(username, password)).thenReturn(esperado);
 
         // Act
         SeguridadModel resultado = seguridadService.autenticacion(username, password);
@@ -53,6 +56,7 @@ class SeguridadServiceImplTest {
         assertNotNull(resultado);
         assertEquals("access-token", resultado.getToken());
         assertEquals("refresh-token", resultado.getRefresh());
-        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(autenticarUsuarioUseCase).ejecutar(username, password);
+        verifyNoInteractions(refrescarTokenUseCase);
     }
 }

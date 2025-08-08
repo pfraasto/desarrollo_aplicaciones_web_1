@@ -5,6 +5,14 @@ import lombok.Data;
 
 import java.util.Set;
 
+/**
+ * Modelo de dominio para el Usuario.
+ * Campos relevantes:
+ * - username: Identificador único de autenticación.
+ * - email: Correo de contacto (no se usa para autenticación en este contexto).
+ * - roles: Conjunto de roles que determinan autorizaciones.
+ * Nota: Es un objeto de dominio y debe permanecer independiente de frameworks.
+ */
 @Data
 @Builder
 public class UsuarioModel {

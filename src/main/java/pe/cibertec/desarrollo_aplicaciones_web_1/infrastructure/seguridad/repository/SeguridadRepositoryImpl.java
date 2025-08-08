@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.model.RolModel;
 import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.model.UsuarioModel;
-import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.repository.SeguridadRepository;
+import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.repository.UsuarioRepository;
 import pe.cibertec.desarrollo_aplicaciones_web_1.infrastructure.seguridad.jpa.UsuarioRepositoryJpa;
 
 import java.util.Optional;
@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class SeguridadRepositoryImpl implements SeguridadRepository {
+public class SeguridadRepositoryImpl implements UsuarioRepository {
 
     private final UsuarioRepositoryJpa usuarioRepositoryJpa;
 

@@ -6,11 +6,11 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.model.RolModel;
 import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.model.UsuarioModel;
 import pe.cibertec.desarrollo_aplicaciones_web_1.domain.seguridad.service.TokenService;
+import pe.cibertec.desarrollo_aplicaciones_web_1.infrastructure.configuration.seguridad.JwtProperties;
 
 import javax.crypto.SecretKey;
 import java.util.Collections;
@@ -23,14 +23,7 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class JwtTokenServiceImpl implements TokenService {
 
-    @Value("${security.jwt.secret}")
-    private String claveSecreta;
-
-    @Value("${security.jwt.access-token.expiration}")
-    private long expiracionTokenAccesoMilisegundos;
-
-    @Value("${security.jwt.refresh-token.expiration}")
-    private long expiracionTokenRefrescoMilisegundos;
+    private final JwtProperties jwtProperties;
 
     /**
      * Genera un Access Token con claims personalizados del usuario.
@@ -38,7 +31,7 @@ public class JwtTokenServiceImpl implements TokenService {
     @Override
     public String generarTokenAcceso(UsuarioModel usuario) {
         Map<String, Object> claims = construirClaimsDesdeUsuario(usuario);
-        return generarToken(claims, usuario.getUsername(), expiracionTokenAccesoMilisegundos);
+        return generarToken(claims, usuario.getUsername(), jwtProperties.getAccessTokenExpiration());
     }
 
     /**
@@ -46,7 +39,7 @@ public class JwtTokenServiceImpl implements TokenService {
      */
     @Override
     public String generarTokenRefresco(UsuarioModel usuario) {
-        return generarToken(Collections.emptyMap(), usuario.getUsername(), expiracionTokenRefrescoMilisegundos);
+        return generarToken(Collections.emptyMap(), usuario.getUsername(), jwtProperties.getRefreshTokenExpiration());
     }
 
     /**
@@ -96,7 +89,7 @@ public class JwtTokenServiceImpl implements TokenService {
     }
 
     private SecretKey obtenerClaveFirma() {
-        byte[] keyBytes = Decoders.BASE64.decode(claveSecreta);
+        byte[] keyBytes = Decoders.BASE64URL.decode(jwtProperties.getSecret());
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

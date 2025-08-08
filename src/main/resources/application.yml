@@ -16,8 +16,6 @@ spring:
 
 security:
   jwt:
-    secret: cHJ1ZWJhLWRlbW8tZnJhbmtsaW4tdXBuLXNlZ3VyaWRhZC1zcHJpbmdib290LWp3dC1wcnVlYmEtcHJ1ZWJhLXBydWViYQ== #prueba-demo-franklin-cibertec-seguridad-springboot-jwt-prueba-prueba
-    access-token:
-      expiration: 900000  # 15 minutes in milliseconds
-    refresh-token:
-      expiration: 900000  # 15 minutes in milliseconds
+    secret: TDSZydxbpLTzBiSyAdfK6qzd8nBt9WeOFBO-Pi7NO5X1IWgLA594XmYEj99lEK_ZEyKKs2dkmIe8g1dFBYuQJg
+    access-token-expiration: 900000  # 15 minutos en milisegundos
+    refresh-token-expiration: 900000  # 15 minutos en milisegundos
